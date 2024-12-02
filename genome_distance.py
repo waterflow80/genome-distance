@@ -1,57 +1,49 @@
 import Bio
 from Bio import SeqIO
+from Bio.UniProt.GOA import record_has
+
 from config import GENOME_DATA_PATH, K_MERS_VAL
 import os
-from typing import Dict, List
+from typing import Dict, List, Tuple
 from collections import defaultdict
 import hashlib
 import itertools
 
-def load_data()->Dict[str, SeqIO.FastaIO]:
+def load_data()->Dict[str, str]:
     """
-    Read the content of the fasta files and return a list of Bio.SeqIO.FastaIO.FastaIterator
-    objects
-    :return: dict of fasta_file_name -> SeqIO.FastaIO.FastaIterator
+    Read the content of the fasta files and return a dict of sequence's ids mapped to the actual sequence
+    :return:
     """
-    genomes_fasta_iterators_dict = {}  # Map contains the name of the file and the corresponding fastaIterator
+    genomes_dict = {}  # Map contains the sequence name of the file and the corresponding sequence
     os.chdir(GENOME_DATA_PATH)
     fasta_files = os.listdir()
     for fasta_file in fasta_files:
-        fasta_iter = SeqIO.parse(fasta_file, "fasta")
-        genomes_fasta_iterators_dict[fasta_file] = fasta_iter
+        record_dict = SeqIO.to_dict(SeqIO.parse(fasta_file, "fasta"))
+        genomes_dict.update(record_dict)
 
-    print(f"Returning fasta files {genomes_fasta_iterators_dict.keys()}")
-    return genomes_fasta_iterators_dict
+    print(f"Returning fasta files {genomes_dict.keys()}")
+    return genomes_dict
 
-
-def get_full_sequence_from_fasta_iterator(fasta_iterator:SeqIO.FastaIO.FastaIterator)->str:
-    """
-    Concatenate all the sequences in the given fasta file and return one sequence
-    :param fasta_iterator:
-    :return:
-    """
-    print(f"Extracting full sequence from {fasta_iterator} ..")
-    full_sequence = ""
-    for record in list(fasta_iterator):
-        full_sequence += record.seq
-    return full_sequence
-
-
-def apply_k_mers(genomes_fasta_iterators:Dict[str, SeqIO.FastaIO], k:int):
+def apply_k_mers(genomes_dict:dict, k:int)->dict:
     """
     Split the genomes' sequences using the k-mers technique
-    :param genomes_fasta_iterators:
+    :param
     :param k:
-    :return:
+    :return: {'seq_id1' : ["ATTCCGT", "ATTCAACT", ...],
+              'seq_id2' : ["ATTCCGT", "ATTCAACT", ...],
+            }
     """
     print(f"Applying k-mers..")
-    genomes_k_mers = defaultdict(list)  # {fasta_filename: ["ATTGCC...TGCA", "ATTGCC...TGCA", ...]}
-    for fasta_file, fasta_iterator in genomes_fasta_iterators.items():
-        full_sequence = get_full_sequence_from_fasta_iterator(fasta_iterator)
+    genomes_k_mers = defaultdict(list)  # {seq_id: ["ATTGCC...TGCA", "ATTAAC...TGGC", ...]}
+    for seq_id, sequence in genomes_dict.items():
+        print(f"Calculating kmers for sequence {seq_id}")
+        seqs = [] # the resulting sequences
         i = 0
-        while (k + i) <= len(full_sequence):
-            genomes_k_mers[fasta_file].append(full_sequence[i:k + i])
+        while (k + i) <= len(sequence):
+            seqs.append(sequence.seq[i:k + i])
             i += 1
+        genomes_k_mers[seq_id] = seqs
+
     return genomes_k_mers
 
 def _get_intersection(A, B)->set:
@@ -72,7 +64,7 @@ def _get_union(A, B):
     """
     return set.union(set(A), set(B))
 
-def calculate_jaccard_index(A: List[Bio.Seq.Seq], B: List[Bio.Seq.Seq]) -> float:
+def calculate_jaccard_index(A: List, B: List) -> float:
     """
     Calculate the Jaccard distance between A and B
     :param A:
@@ -109,27 +101,36 @@ def calculate_sketch(k_mers_genomes:dict):
     :param k_mers_genomes:
     :return:
     """
-    for genome, kmers in k_mers_genomes.items():
+    print(f"Calculating sketch of k-mers genomes..")
+    for seq_id, sequences in k_mers_genomes.items():
         # step 1
-        forward_hash = [calculate_hash(kmer) for kmer in kmers]
-        reversed_compliment_hash = [calculate_hash(get_reverse_compliment(kmer)) for kmer in kmers]
+        forward_hash = [calculate_hash(kmer) for kmer in sequences]
+        reversed_compliment_hash = [calculate_hash(get_reverse_compliment(kmer)) for kmer in sequences]
         res_hash = [min(fwd_hash, cmp_rev_hash) for fwd_hash, cmp_rev_hash in zip(forward_hash, reversed_compliment_hash)]
 
         # step 2
         res_hash = sorted(res_hash)
 
-        # step 3
-        k_mers_genomes[genome] = res_hash[:1000]
+        # step 3 update
+        k_mers_genomes[seq_id] = res_hash[:1000]
 
     return k_mers_genomes
+
+def get_all_sequences(k_mers_genomes):
+    all_sequences = []  # List of tuples of sequences
+    for genome, kmers in k_mers_genomes.items():
+        for seq in kmers:
+            all_sequences.append(seq)
+    return all_sequences
 
 if __name__ == '__main__':
     genomes = load_data()
     k_mers_genomes = apply_k_mers(genomes, k=K_MERS_VAL)
+    k_mers_genomes_sketch = calculate_sketch(k_mers_genomes)
 
     #Calculating distance using the sketch
-    fasta_files = list(k_mers_genomes.keys())
-    for comb in itertools.combinations(fasta_files, 2):
+    all_sequences =list( k_mers_genomes_sketch.keys())
+    for comb in itertools.combinations(all_sequences, 2):
         print(f"Distance between ", comb[0], " and ", comb[1], "is: ",
-              calculate_jaccard_distance(k_mers_genomes.get(comb[0]), k_mers_genomes.get(comb[1])))
+              calculate_jaccard_distance(k_mers_genomes_sketch.get(comb[0]), k_mers_genomes_sketch.get(comb[1])))
 
