@@ -1,19 +1,21 @@
-import Bio
-from Bio import SeqIO
-from Bio.UniProt.GOA import record_has
 
-from config import GENOME_DATA_PATH, K_MERS_VAL
+from Bio import SeqIO
+
 import os
 from typing import Dict, List, Tuple
 from collections import defaultdict
 import hashlib
 import itertools
 
+GENOME_DATA_PATH="s_pneumoniae_genomes" # Note: if you change the code structure you may want to update this
+K_MERS_VAL=14
+
 def load_data()->Dict[str, str]:
     """
     Read the content of the fasta files and return a dict of sequence's ids mapped to the actual sequence
     :return:
     """
+    print("Loading data..")
     genomes_dict = {}  # Map contains the sequence name of the file and the corresponding sequence
     os.chdir(GENOME_DATA_PATH)
     fasta_files = os.listdir()
@@ -21,7 +23,6 @@ def load_data()->Dict[str, str]:
         record_dict = SeqIO.to_dict(SeqIO.parse(fasta_file, "fasta"))
         genomes_dict.update(record_dict)
 
-    print(f"Returning fasta files {genomes_dict.keys()}")
     return genomes_dict
 
 def apply_k_mers(genomes_dict:dict, k:int)->dict:
