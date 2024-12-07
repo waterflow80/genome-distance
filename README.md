@@ -32,3 +32,8 @@ Distance between  .14412_3_84.1  and  .14412_3_84.8 is:  0.9969056214543579
 Distance between  .14412_3_84.1  and  .14412_3_84.9 is:  0.9989801121876594
 ...
 ```
+
+## Benchmarking
+### The effect of the Sketch size
+The following line plot illustrates the effect of the sketch size on execution time:
+![execution_time](https://github.com/user-attachments/assets/91507078-fa67-4e92-8f4a-c20d1b28b7bd)
