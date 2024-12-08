@@ -33,7 +33,14 @@ Distance between  .14412_3_84.1  and  .14412_3_84.9 is:  0.9989801121876594
 ...
 ```
 
-## Benchmarking
-### The effect of the Sketch size
+## Effect of Sketch Size
+### Effect on distance
+We tried to analyse the effect of the sketch size on the calcualted distance. So, we took two random sequences `.14412_3_84.17` and `.14412_3_82.13` and calulcated their distances using different values of the sketch size, and we got the following results:
+
+![sketch_size_to_distance](https://github.com/user-attachments/assets/a23eecc0-a3db-47ac-ad46-fc9a74aa6324)
+
+We can see that for sketch sizes less than **1000**, the distance was unpredictable. But starting from **1000**, the distance remains the same at `0.08561643835616439`.
+### Effect on calulation time
 The following line plot illustrates the effect of the sketch size on execution time:
-![execution_time](https://github.com/user-attachments/assets/91507078-fa67-4e92-8f4a-c20d1b28b7bd)
+
+![execution_time](https://github.com/user-attachments/assets/b0905776-85eb-4daf-aae0-fda038c3caa0)
